@@ -18,7 +18,9 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
 
   void addActivity() {
     controller.clear();
+
     bool isImportant = false;
+    bool showError = false;
 
     showDialog(
       context: context,
@@ -30,8 +32,18 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
             children: [
               TextField(
                 controller: controller,
-                decoration: const InputDecoration(
+                onChanged: (value) {
+                  if (showError && value.trim().isNotEmpty) {
+                    updateDialog(() {
+                      showError = false;
+                    });
+                  }
+                },
+                decoration: InputDecoration(
                   labelText: 'Activity title',
+                  errorText: showError
+                      ? 'Activity title is required'
+                      : null,
                 ),
               ),
               CheckboxListTile(
@@ -56,18 +68,29 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
               onPressed: () {
                 final title = controller.text.trim();
 
-                if (title.isNotEmpty) {
-                  setState(() {
-                    activities.add(
-                      Activity(
-                        title,
-                        isImportant: isImportant,
-                      ),
-                    );
+                if (title.isEmpty) {
+                  updateDialog(() {
+                    showError = true;
                   });
-
-                  Navigator.pop(dialogContext);
+                  return;
                 }
+
+                setState(() {
+                  activities.add(
+                    Activity(
+                      title,
+                      isImportant: isImportant,
+                    ),
+                  );
+                });
+
+                Navigator.pop(dialogContext);
+
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Activity added successfully'),
+                  ),
+                );
               },
               child: const Text('Add'),
             ),
@@ -176,7 +199,10 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
           Expanded(
             child: activities.isEmpty
                 ? const Center(
-              child: Text('No activities available'),
+              child: Text(
+                'No activities yet. Tap + to add one.',
+                textAlign: TextAlign.center,
+              ),
             )
                 : ListView.builder(
               itemCount: activities.length,
@@ -201,7 +227,10 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                     activity.completed ? 'Done' : 'To do',
                   ),
                   trailing: activity.isImportant
-                      ? const Icon(Icons.star)
+                      ? const Icon(
+                    Icons.star,
+                    color: Colors.amber,
+                  )
                       : null,
                   onTap: () {
                     manageActivity(activity);
